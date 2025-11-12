@@ -1671,6 +1671,14 @@ void SetFlags(const char* flags) {
   V8::SetFlagsFromString(flags);
 }
 
+/********** Memory Management **********/
+void IsolateLowMemoryNotification(IsolatePtr iso) {
+  if (iso == nullptr) {
+    return;
+  }
+  iso->LowMemoryNotification();
+}
+
 /********** SharedArrayBuffer & BackingStore ***********/
 
 struct v8BackingStore {

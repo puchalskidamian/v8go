@@ -311,6 +311,8 @@ ValuePtr FunctionSourceMapUrl(ValuePtr ptr);
 const char* Version();
 extern void SetFlags(const char* flags);
 
+extern void IsolateLowMemoryNotification(IsolatePtr iso_ptr);
+
 extern BackingStorePtr SharedArrayBufferGetBackingStore(ValuePtr ptr);
 extern void BackingStoreRelease(BackingStorePtr ptr);
 extern void* BackingStoreData(BackingStorePtr ptr);
