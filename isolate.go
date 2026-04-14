@@ -149,6 +149,16 @@ func (i *Isolate) Dispose() {
 	i.ptr = nil
 }
 
+// LowMemoryNotification informs V8 that the system is running low on memory.
+// V8 uses this notification to attempt to free memory by triggering garbage collection.
+// This is particularly useful when contexts are recreated frequently to prevent memory leaks.
+func (i *Isolate) LowMemoryNotification() {
+	if i.ptr == nil {
+		panic("Isolate has been disposed")
+	}
+	C.IsolateLowMemoryNotification(i.ptr)
+}
+
 // ThrowException schedules an exception to be thrown when returning to
 // JavaScript. When an exception has been scheduled it is illegal to invoke
 // any JavaScript operation; the caller must return immediately and only after

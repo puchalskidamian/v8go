@@ -1331,6 +1331,33 @@ void ObjectSet(ValuePtr ptr, const char* key, ValuePtr prop_val) {
   obj->Set(local_ctx, key_val, prop_val->ptr.Get(iso)).Check();
 }
 
+RtnError ObjectSetString(ValuePtr ptr,
+                         const char* key,
+                         const char* prop_val,
+                         int prop_val_length) {
+  LOCAL_OBJECT(ptr);
+
+  Local<String> key_val;
+  if (!String::NewFromUtf8(iso, key, NewStringType::kNormal)
+           .ToLocal(&key_val)) {
+    return ExceptionError(try_catch, iso, local_ctx);
+  }
+
+  Local<String> prop_value;
+  if (!String::NewFromUtf8(iso, prop_val, NewStringType::kNormal,
+                           prop_val_length)
+           .ToLocal(&prop_value)) {
+    return ExceptionError(try_catch, iso, local_ctx);
+  }
+
+  Maybe<bool> set = obj->Set(local_ctx, key_val, prop_value);
+  if (set.IsNothing()) {
+    return ExceptionError(try_catch, iso, local_ctx);
+  }
+
+  return RtnError{};
+}
+
 void ObjectSetIdx(ValuePtr ptr, uint32_t idx, ValuePtr prop_val) {
   LOCAL_OBJECT(ptr);
   obj->Set(local_ctx, idx, prop_val->ptr.Get(iso)).Check();
@@ -1667,5 +1694,53 @@ const char* Version() {
 
 void SetFlags(const char* flags) {
   V8::SetFlagsFromString(flags);
+}
+
+/********** Memory Management **********/
+void IsolateLowMemoryNotification(IsolatePtr iso) {
+  if (iso == nullptr) {
+    return;
+  }
+  ISOLATE_SCOPE(iso)
+  iso->LowMemoryNotification();
+}
+
+/********** SharedArrayBuffer & BackingStore ***********/
+
+struct v8BackingStore {
+  v8BackingStore(std::shared_ptr<v8::BackingStore>&& ptr)
+      : backing_store{ptr} {}
+  std::shared_ptr<v8::BackingStore> backing_store;
+};
+
+BackingStorePtr SharedArrayBufferGetBackingStore(ValuePtr ptr) {
+  LOCAL_VALUE(ptr);
+  auto buffer = Local<SharedArrayBuffer>::Cast(value);
+  auto backing_store = buffer->GetBackingStore();
+  auto proxy = new v8BackingStore(std::move(backing_store));
+  return proxy;
+}
+
+void BackingStoreRelease(BackingStorePtr ptr) {
+  if (ptr == nullptr) {
+    return;
+  }
+  ptr->backing_store.reset();
+  delete ptr;
+}
+
+void* BackingStoreData(BackingStorePtr ptr) {
+  if (ptr == nullptr) {
+    return nullptr;
+  }
+
+  return ptr->backing_store->Data();
+}
+
+size_t BackingStoreByteLength(BackingStorePtr ptr) {
+  if (ptr == nullptr) {
+    return 0;
+  }
+  return ptr->backing_store->ByteLength();
 }
 }
