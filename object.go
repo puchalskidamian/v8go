@@ -51,7 +51,7 @@ func coerceValue(iso *Isolate, val interface{}) (*Value, error) {
 // Set will set a property on the Object to a given value.
 // Supports all value types, eg: Object, Array, Date, Set, Map etc
 // If the value passed is a Go supported primitive (string, int32, uint32, int64, uint64, float64, big.Int)
-// then a V8 value will be created and set as the value property.
+// then a *Value will be created and set as the value property.
 func (o *Object) Set(key string, val interface{}) error {
 	if s, ok := val.(string); ok {
 		ckey := C.CString(key)

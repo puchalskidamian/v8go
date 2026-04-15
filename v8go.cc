@@ -1331,22 +1331,16 @@ void ObjectSet(ValuePtr ptr, const char* key, ValuePtr prop_val) {
   obj->Set(local_ctx, key_val, prop_val->ptr.Get(iso)).Check();
 }
 
-RtnError ObjectSetString(ValuePtr ptr,
-                         const char* key,
-                         const char* prop_val,
-                         int prop_val_length) {
+RtnError ObjectSetString(ValuePtr ptr, const char* key, const char* prop_val, int prop_val_length) {
   LOCAL_OBJECT(ptr);
 
   Local<String> key_val;
-  if (!String::NewFromUtf8(iso, key, NewStringType::kNormal)
-           .ToLocal(&key_val)) {
+  if (!String::NewFromUtf8(iso, key, NewStringType::kNormal).ToLocal(&key_val)) {
     return ExceptionError(try_catch, iso, local_ctx);
   }
 
   Local<String> prop_value;
-  if (!String::NewFromUtf8(iso, prop_val, NewStringType::kNormal,
-                           prop_val_length)
-           .ToLocal(&prop_value)) {
+  if (!String::NewFromUtf8(iso, prop_val, NewStringType::kNormal, prop_val_length).ToLocal(&prop_value)) {
     return ExceptionError(try_catch, iso, local_ctx);
   }
 
@@ -1696,11 +1690,11 @@ void SetFlags(const char* flags) {
   V8::SetFlagsFromString(flags);
 }
 
-/********** Memory Management **********/
 void IsolateLowMemoryNotification(IsolatePtr iso) {
   if (iso == nullptr) {
     return;
   }
+  
   ISOLATE_SCOPE(iso)
   iso->LowMemoryNotification();
 }
