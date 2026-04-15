@@ -276,10 +276,7 @@ int ValueIsWasmModuleObject(ValuePtr ptr);
 int ValueIsModuleNamespaceObject(ValuePtr ptr);
 
 extern void ObjectSet(ValuePtr ptr, const char* key, ValuePtr val_ptr);
-extern RtnError ObjectSetString(ValuePtr ptr,
-                                const char* key,
-                                const char* value,
-                                int value_length);
+extern RtnError ObjectSetString(ValuePtr ptr, const char* key, const char* value, int value_length);
 extern void ObjectSetIdx(ValuePtr ptr, uint32_t idx, ValuePtr val_ptr);
 extern int ObjectSetInternalField(ValuePtr ptr, int idx, ValuePtr val_ptr);
 extern int ObjectInternalFieldCount(ValuePtr ptr);
