@@ -47,13 +47,11 @@ typedef struct m_ctx m_ctx;
 typedef struct m_value m_value;
 typedef struct m_template m_template;
 typedef struct m_unboundScript m_unboundScript;
-typedef struct v8BackingStore v8BackingStore;
 
 typedef m_ctx* ContextPtr;
 typedef m_value* ValuePtr;
 typedef m_template* TemplatePtr;
 typedef m_unboundScript* UnboundScriptPtr;
-typedef v8BackingStore* BackingStorePtr;
 
 typedef struct {
   const char* msg;
@@ -314,11 +312,6 @@ const char* Version();
 extern void SetFlags(const char* flags);
 
 extern void IsolateLowMemoryNotification(IsolatePtr iso_ptr);
-
-extern BackingStorePtr SharedArrayBufferGetBackingStore(ValuePtr ptr);
-extern void BackingStoreRelease(BackingStorePtr ptr);
-extern void* BackingStoreData(BackingStorePtr ptr);
-extern size_t BackingStoreByteLength(BackingStorePtr ptr);
 
 #ifdef __cplusplus
 }  // extern "C"
