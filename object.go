@@ -34,17 +34,17 @@ func (o *Object) MethodCall(methodName string, args ...Valuer) (*Value, error) {
 	return fn.Call(o, args...)
 }
 
-func coerceValue(iso *Isolate, val interface{}) (*Value, error) {
+func coerceValue(iso *Isolate, val interface{}) (*Value, bool, error) {
 	switch v := val.(type) {
 	case string, int32, uint32, int64, uint64, float64, bool, *big.Int:
 		// ignoring error as code cannot reach the error state as we are already
 		// validating the new value types in this case statement
 		value, _ := NewValue(iso, v)
-		return value, nil
+		return value, true, nil
 	case Valuer:
-		return v.value(), nil
+		return v.value(), false, nil
 	default:
-		return nil, fmt.Errorf("v8go: unsupported object property type `%T`", v)
+		return nil, false, fmt.Errorf("v8go: unsupported object property type `%T`", v)
 	}
 }
 
@@ -53,23 +53,12 @@ func coerceValue(iso *Isolate, val interface{}) (*Value, error) {
 // If the value passed is a Go supported primitive (string, int32, uint32, int64, uint64, float64, big.Int)
 // then a *Value will be created and set as the value property.
 func (o *Object) Set(key string, val interface{}) error {
-	if s, ok := val.(string); ok {
-		ckey := C.CString(key)
-		cval := C.CString(s)
-		defer C.free(unsafe.Pointer(ckey))
-		defer C.free(unsafe.Pointer(cval))
-
-		rtn := C.ObjectSetString(o.ptr, ckey, cval, C.int(len(s)))
-		if rtn.msg != nil {
-			return newJSError(rtn)
-		}
-
-		return nil
-	}
-
-	value, err := coerceValue(o.ctx.iso, val)
+	value, owned, err := coerceValue(o.ctx.iso, val)
 	if err != nil {
 		return err
+	}
+	if owned {
+		defer value.Release()
 	}
 
 	ckey := C.CString(key)
@@ -83,9 +72,12 @@ func (o *Object) Set(key string, val interface{}) error {
 // If the value passed is a Go supported primitive (string, int32, uint32, int64, uint64, float64, big.Int)
 // then a *Value will be created and set as the value property.
 func (o *Object) SetIdx(idx uint32, val interface{}) error {
-	value, err := coerceValue(o.ctx.iso, val)
+	value, owned, err := coerceValue(o.ctx.iso, val)
 	if err != nil {
 		return err
+	}
+	if owned {
+		defer value.Release()
 	}
 
 	C.ObjectSetIdx(o.ptr, C.uint32_t(idx), value.ptr)
@@ -96,10 +88,12 @@ func (o *Object) SetIdx(idx uint32, val interface{}) error {
 // SetInternalField sets the value of an internal field for an ObjectTemplate instance.
 // Panics if the index isn't in the range set by (*ObjectTemplate).SetInternalFieldCount.
 func (o *Object) SetInternalField(idx uint32, val interface{}) error {
-	value, err := coerceValue(o.ctx.iso, val)
-
+	value, owned, err := coerceValue(o.ctx.iso, val)
 	if err != nil {
 		return err
+	}
+	if owned {
+		defer value.Release()
 	}
 
 	inserted := C.ObjectSetInternalField(o.ptr, C.int(idx), value.ptr)

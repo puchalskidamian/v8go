@@ -40,6 +40,7 @@ func (t *template) Set(name string, val interface{}, attributes ...PropertyAttri
 			return fmt.Errorf("v8go: unable to create new value: %v", err)
 		}
 		C.TemplateSetValue(t.ptr, cname, newVal.ptr, C.int(attrs))
+		newVal.Release()
 	case *ObjectTemplate:
 		C.TemplateSetTemplate(t.ptr, cname, v.ptr, C.int(attrs))
 		runtime.KeepAlive(v)
