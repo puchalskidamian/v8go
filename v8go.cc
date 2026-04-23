@@ -64,8 +64,7 @@ const char* CopyString(String::Utf8Value& value) {
   return CopyString(std::string(*value, value.length()));
 }
 
-static RtnError ExceptionError(TryCatch& try_catch,
-                               Isolate* iso,
+static RtnError ExceptionError(TryCatch& try_catch, Isolate* iso,
                                Local<Context> ctx) {
   HandleScope handle_scope(iso);
 
@@ -165,6 +164,29 @@ IsolatePtr NewIsolate() {
   return iso;
 }
 
+IsolatePtr NewIsolateWithConstraints(size_t maximum_heap_size_in_bytes) {
+  ResourceConstraints rc;
+  rc.ConfigureDefaultsFromHeapSize(0, maximum_heap_size_in_bytes);
+
+  Isolate::CreateParams params;
+  params.constraints = rc;
+  params.array_buffer_allocator = default_allocator;
+
+  Isolate* iso = Isolate::New(params);
+  Locker locker(iso);
+  Isolate::Scope isolate_scope(iso);
+  HandleScope handle_scope(iso);
+
+  iso->SetCaptureStackTraceForUncaughtExceptions(true);
+
+  m_ctx* ctx = new m_ctx;
+  ctx->ptr.Reset(iso, Context::New(iso));
+  ctx->iso = iso;
+  iso->SetData(0, ctx);
+
+  return iso;
+}
+
 static inline m_ctx* isolateInternalContext(Isolate* iso) {
   return static_cast<m_ctx*>(iso->GetData(0));
 }
@@ -172,6 +194,29 @@ static inline m_ctx* isolateInternalContext(Isolate* iso) {
 void IsolatePerformMicrotaskCheckpoint(IsolatePtr iso) {
   ISOLATE_SCOPE(iso)
   iso->PerformMicrotaskCheckpoint();
+}
+
+int PumpMessageLoop(IsolatePtr iso, int max_tasks) {
+  if (iso == nullptr) {
+    return 0;
+  }
+
+  Locker locker(iso);
+  Isolate::Scope isolate_scope(iso);
+  HandleScope handle_scope(iso);
+
+  int tasks_run = 0;
+  const int limit = max_tasks <= 0 ? 1000 : max_tasks;
+
+  while (tasks_run < limit) {
+    bool executed = platform::PumpMessageLoop(default_platform.get(), iso);
+    if (!executed) {
+      break;
+    }
+
+    tasks_run++;
+  }
+  return tasks_run;
 }
 
 void IsolateDispose(IsolatePtr iso) {
@@ -183,9 +228,7 @@ void IsolateDispose(IsolatePtr iso) {
   iso->Dispose();
 }
 
-void IsolateTerminateExecution(IsolatePtr iso) {
-  iso->TerminateExecution();
-}
+void IsolateTerminateExecution(IsolatePtr iso) { iso->TerminateExecution(); }
 
 int IsolateIsExecutionTerminating(IsolatePtr iso) {
   return iso->IsExecutionTerminating();
@@ -211,8 +254,7 @@ IsolateHStatistics IsolationGetHeapStatistics(IsolatePtr iso) {
                             hs.number_of_detached_contexts()};
 }
 
-RtnUnboundScript IsolateCompileUnboundScript(IsolatePtr iso,
-                                             const char* s,
+RtnUnboundScript IsolateCompileUnboundScript(IsolatePtr iso, const char* s,
                                              const char* o,
                                              CompileOptions opts) {
   ISOLATE_SCOPE_INTERNAL_CONTEXT(iso);
@@ -401,9 +443,7 @@ void TemplateFreeWrapper(TemplatePtr tmpl) {
   delete tmpl;
 }
 
-void TemplateSetValue(TemplatePtr ptr,
-                      const char* name,
-                      ValuePtr val,
+void TemplateSetValue(TemplatePtr ptr, const char* name, ValuePtr val,
                       int attributes) {
   LOCAL_TEMPLATE(ptr);
 
@@ -412,9 +452,7 @@ void TemplateSetValue(TemplatePtr ptr,
   tmpl->Set(prop_name, val->ptr.Get(iso), (PropertyAttribute)attributes);
 }
 
-void TemplateSetTemplate(TemplatePtr ptr,
-                         const char* name,
-                         TemplatePtr obj,
+void TemplateSetTemplate(TemplatePtr ptr, const char* name, TemplatePtr obj,
                          int attributes) {
   LOCAL_TEMPLATE(ptr);
 
@@ -571,8 +609,7 @@ RtnValue FunctionTemplateGetFunction(TemplatePtr ptr, ContextPtr ctx) {
   Local<Context> local_ctx = ctx->ptr.Get(iso); \
   Context::Scope context_scope(local_ctx);
 
-ContextPtr NewContext(IsolatePtr iso,
-                      TemplatePtr global_template_ptr,
+ContextPtr NewContext(IsolatePtr iso, TemplatePtr global_template_ptr,
                       int ref) {
   Locker locker(iso);
   Isolate::Scope isolate_scope(iso);
@@ -599,9 +636,7 @@ ContextPtr NewContext(IsolatePtr iso,
   return ctx;
 }
 
-int ContextRetainedValueCount(ContextPtr ctx) {
-  return ctx->vals.size();
-}
+int ContextRetainedValueCount(ContextPtr ctx) { return ctx->vals.size(); }
 
 void ContextFree(ContextPtr ctx) {
   if (ctx == nullptr) {
@@ -663,8 +698,7 @@ RtnValue RunScript(ContextPtr ctx, const char* source, const char* origin) {
 /********** UnboundScript & ScriptCompilerCachedData **********/
 
 ScriptCompilerCachedData* UnboundScriptCreateCodeCache(
-    IsolatePtr iso,
-    UnboundScriptPtr us_ptr) {
+    IsolatePtr iso, UnboundScriptPtr us_ptr) {
   ISOLATE_SCOPE(iso);
 
   Local<UnboundScript> unbound_script = us_ptr->ptr.Get(iso);
@@ -917,9 +951,7 @@ ValuePtr NewValueBigIntFromUnsigned(IsolatePtr iso, uint64_t v) {
   return tracked_value(ctx, val);
 }
 
-RtnValue NewValueBigIntFromWords(IsolatePtr iso,
-                                 int sign_bit,
-                                 int word_count,
+RtnValue NewValueBigIntFromWords(IsolatePtr iso, int sign_bit, int word_count,
                                  const uint64_t* words) {
   ISOLATE_SCOPE_INTERNAL_CONTEXT(iso);
   TryCatch try_catch(iso);
@@ -1594,9 +1626,7 @@ ValuePtr PromiseResult(ValuePtr ptr) {
 
 /********** Function **********/
 
-static void buildCallArguments(Isolate* iso,
-                               Local<Value>* argv,
-                               int argc,
+static void buildCallArguments(Isolate* iso, Local<Value>* argv, int argc,
                                ValuePtr args[]) {
   for (int i = 0; i < argc; i++) {
     argv[i] = args[i]->ptr.Get(iso);
@@ -1661,11 +1691,7 @@ ValuePtr FunctionSourceMapUrl(ValuePtr ptr) {
 
 /********** v8::V8 **********/
 
-const char* Version() {
-  return V8::GetVersion();
-}
+const char* Version() { return V8::GetVersion(); }
 
-void SetFlags(const char* flags) {
-  V8::SetFlagsFromString(flags);
-}
+void SetFlags(const char* flags) { V8::SetFlagsFromString(flags); }
 }

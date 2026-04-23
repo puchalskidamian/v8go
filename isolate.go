@@ -15,6 +15,8 @@ import (
 
 var v8once sync.Once
 
+const defaultPumpMessageLoopMaxTasks = 1000
+
 // Isolate is a JavaScript VM instance with its own heap and
 // garbage collector. Most applications will create one isolate
 // with many V8 contexts for execution.
@@ -61,6 +63,22 @@ func NewIsolate() *Isolate {
 	}
 	iso.null = newValueNull(iso)
 	iso.undefined = newValueUndefined(iso)
+	return iso
+}
+
+// Creates a new V8 isolate with an explicit max heap limit.
+func NewIsolateWithConstraints(maxHeapSizeInBytes uint64) *Isolate {
+	v8once.Do(func() {
+		C.Init()
+	})
+
+	iso := &Isolate{
+		ptr: C.NewIsolateWithConstraints(C.size_t(maxHeapSizeInBytes)),
+		cbs: make(map[int]FunctionCallback),
+	}
+	iso.null = newValueNull(iso)
+	iso.undefined = newValueUndefined(iso)
+
 	return iso
 }
 
@@ -138,6 +156,20 @@ func (i *Isolate) GetHeapStatistics() HeapStatistics {
 		NumberOfNativeContexts:   uint64(hs.number_of_native_contexts),
 		NumberOfDetachedContexts: uint64(hs.number_of_detached_contexts),
 	}
+}
+
+// Executes pending V8 foreground tasks. Returns the number of tasks that ran.
+func (i *Isolate) PumpMessageLoop(maxTasks ...int) int {
+	if i.ptr == nil {
+		return 0
+	}
+
+	limit := defaultPumpMessageLoopMaxTasks
+	if len(maxTasks) > 0 && maxTasks[0] > 0 {
+		limit = maxTasks[0]
+	}
+
+	return int(C.PumpMessageLoop(i.ptr, C.int(limit)))
 }
 
 // Dispose will dispose the Isolate VM; subsequent calls will panic.
