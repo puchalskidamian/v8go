@@ -152,8 +152,7 @@ extern RtnUnboundScript IsolateCompileUnboundScript(IsolatePtr iso_ptr,
                                                     const char* origin,
                                                     CompileOptions options);
 extern ScriptCompilerCachedData* UnboundScriptCreateCodeCache(
-    IsolatePtr iso_ptr,
-    UnboundScriptPtr us_ptr);
+    IsolatePtr iso_ptr, UnboundScriptPtr us_ptr);
 extern void ScriptCompilerCachedDataDelete(
     ScriptCompilerCachedData* cached_data);
 extern RtnValue UnboundScriptRun(ContextPtr ctx_ptr, UnboundScriptPtr us_ptr);
@@ -166,26 +165,20 @@ extern CPUProfile* CPUProfilerStopProfiling(CPUProfiler* ptr,
 extern void CPUProfileDelete(CPUProfile* ptr);
 
 extern ContextPtr NewContext(IsolatePtr iso_ptr,
-                             TemplatePtr global_template_ptr,
-                             int ref);
+                             TemplatePtr global_template_ptr, int ref);
 extern int ContextRetainedValueCount(ContextPtr ctx);
 extern void ContextFree(ContextPtr ptr);
-extern RtnValue RunScript(ContextPtr ctx_ptr,
-                          const char* source,
+extern RtnValue RunScript(ContextPtr ctx_ptr, const char* source,
                           const char* origin);
 extern RtnValue JSONParse(ContextPtr ctx_ptr, const char* str);
 const char* JSONStringify(ContextPtr ctx_ptr, ValuePtr val_ptr);
 extern ValuePtr ContextGlobal(ContextPtr ctx_ptr);
 
 extern void TemplateFreeWrapper(TemplatePtr ptr);
-extern void TemplateSetValue(TemplatePtr ptr,
-                             const char* name,
-                             ValuePtr val_ptr,
-                             int attributes);
-extern void TemplateSetTemplate(TemplatePtr ptr,
-                                const char* name,
-                                TemplatePtr obj_ptr,
-                                int attributes);
+extern void TemplateSetValue(TemplatePtr ptr, const char* name,
+                             ValuePtr val_ptr, int attributes);
+extern void TemplateSetTemplate(TemplatePtr ptr, const char* name,
+                                TemplatePtr obj_ptr, int attributes);
 
 extern TemplatePtr NewObjectTemplate(IsolatePtr iso_ptr);
 extern RtnValue ObjectTemplateNewInstance(TemplatePtr ptr, ContextPtr ctx_ptr);
@@ -206,10 +199,21 @@ extern ValuePtr NewValueBoolean(IsolatePtr iso_ptr, int v);
 extern ValuePtr NewValueNumber(IsolatePtr iso_ptr, double v);
 extern ValuePtr NewValueBigInt(IsolatePtr iso_ptr, int64_t v);
 extern ValuePtr NewValueBigIntFromUnsigned(IsolatePtr iso_ptr, uint64_t v);
-extern RtnValue NewValueBigIntFromWords(IsolatePtr iso_ptr,
-                                        int sign_bit,
-                                        int word_count,
-                                        const uint64_t* words);
+extern RtnValue NewValueBigIntFromWords(IsolatePtr iso_ptr, int sign_bit,
+                                        int word_count, const uint64_t* words);
+extern ValuePtr ContextNewValueInteger(ContextPtr ctx_ptr, int32_t v);
+extern ValuePtr ContextNewValueIntegerFromUnsigned(ContextPtr ctx_ptr,
+                                                   uint32_t v);
+extern RtnValue ContextNewValueString(ContextPtr ctx_ptr, const char* v,
+                                      int v_length);
+extern ValuePtr ContextNewValueBoolean(ContextPtr ctx_ptr, int v);
+extern ValuePtr ContextNewValueNumber(ContextPtr ctx_ptr, double v);
+extern ValuePtr ContextNewValueBigInt(ContextPtr ctx_ptr, int64_t v);
+extern ValuePtr ContextNewValueBigIntFromUnsigned(ContextPtr ctx_ptr,
+                                                  uint64_t v);
+extern RtnValue ContextNewValueBigIntFromWords(ContextPtr ctx_ptr, int sign_bit,
+                                               int word_count,
+                                               const uint64_t* words);
 void ValueRelease(ValuePtr ptr);
 extern RtnString ValueToString(ValuePtr ptr);
 const uint32_t* ValueToArrayIndex(ValuePtr ptr);
@@ -299,9 +303,7 @@ RtnValue PromiseThen2(ValuePtr ptr, int on_fulfilled_ref, int on_rejected_ref);
 RtnValue PromiseCatch(ValuePtr ptr, int callback_ref);
 extern ValuePtr PromiseResult(ValuePtr ptr);
 
-extern RtnValue FunctionCall(ValuePtr ptr,
-                             ValuePtr recv,
-                             int argc,
+extern RtnValue FunctionCall(ValuePtr ptr, ValuePtr recv, int argc,
                              ValuePtr argv[]);
 RtnValue FunctionNewInstance(ValuePtr ptr, int argc, ValuePtr args[]);
 ValuePtr FunctionSourceMapUrl(ValuePtr ptr);

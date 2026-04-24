@@ -642,6 +642,16 @@ void ContextFree(ContextPtr ctx) {
   if (ctx == nullptr) {
     return;
   }
+  if (!ctx->ptr.IsEmpty()) {
+    Isolate* iso = ctx->iso;
+    Locker locker(iso);
+    Isolate::Scope isolate_scope(iso);
+    HandleScope handle_scope(iso);
+    Local<Context> local_ctx = ctx->ptr.Get(iso);
+    Context::Scope context_scope(local_ctx);
+
+    iso->ContextDisposedNotification(true);
+  }
   ctx->ptr.Reset();
 
   for (auto it = ctx->vals.begin(); it != ctx->vals.end(); ++it) {
@@ -956,6 +966,112 @@ RtnValue NewValueBigIntFromWords(IsolatePtr iso, int sign_bit, int word_count,
   ISOLATE_SCOPE_INTERNAL_CONTEXT(iso);
   TryCatch try_catch(iso);
   Local<Context> local_ctx = ctx->ptr.Get(iso);
+
+  RtnValue rtn = {};
+  Local<BigInt> bigint;
+  if (!BigInt::NewFromWords(local_ctx, sign_bit, word_count, words)
+           .ToLocal(&bigint)) {
+    rtn.error = ExceptionError(try_catch, iso, local_ctx);
+    return rtn;
+  }
+  m_value* val = new m_value;
+  val->id = 0;
+  val->iso = iso;
+  val->ctx = ctx;
+  val->ptr = Persistent<Value, CopyablePersistentTraits<Value>>(iso, bigint);
+  rtn.value = tracked_value(ctx, val);
+  return rtn;
+}
+
+ValuePtr ContextNewValueInteger(ContextPtr ctx, int32_t v) {
+  LOCAL_CONTEXT(ctx);
+  m_value* val = new m_value;
+  val->id = 0;
+  val->iso = iso;
+  val->ctx = ctx;
+  val->ptr = Persistent<Value, CopyablePersistentTraits<Value>>(
+      iso, Integer::New(iso, v));
+  return tracked_value(ctx, val);
+}
+
+ValuePtr ContextNewValueIntegerFromUnsigned(ContextPtr ctx, uint32_t v) {
+  LOCAL_CONTEXT(ctx);
+  m_value* val = new m_value;
+  val->id = 0;
+  val->iso = iso;
+  val->ctx = ctx;
+  val->ptr = Persistent<Value, CopyablePersistentTraits<Value>>(
+      iso, Integer::NewFromUnsigned(iso, v));
+  return tracked_value(ctx, val);
+}
+
+RtnValue ContextNewValueString(ContextPtr ctx, const char* v, int v_length) {
+  LOCAL_CONTEXT(ctx);
+  RtnValue rtn = {};
+  Local<String> str;
+  if (!String::NewFromUtf8(iso, v, NewStringType::kNormal, v_length)
+           .ToLocal(&str)) {
+    rtn.error = ExceptionError(try_catch, iso, local_ctx);
+    return rtn;
+  }
+  m_value* val = new m_value;
+  val->id = 0;
+  val->iso = iso;
+  val->ctx = ctx;
+  val->ptr = Persistent<Value, CopyablePersistentTraits<Value>>(iso, str);
+  rtn.value = tracked_value(ctx, val);
+  return rtn;
+}
+
+ValuePtr ContextNewValueBoolean(ContextPtr ctx, int v) {
+  LOCAL_CONTEXT(ctx);
+  m_value* val = new m_value;
+  val->id = 0;
+  val->iso = iso;
+  val->ctx = ctx;
+  val->ptr = Persistent<Value, CopyablePersistentTraits<Value>>(
+      iso, Boolean::New(iso, v));
+  return tracked_value(ctx, val);
+}
+
+ValuePtr ContextNewValueNumber(ContextPtr ctx, double v) {
+  LOCAL_CONTEXT(ctx);
+  m_value* val = new m_value;
+  val->id = 0;
+  val->iso = iso;
+  val->ctx = ctx;
+  val->ptr = Persistent<Value, CopyablePersistentTraits<Value>>(
+      iso, Number::New(iso, v));
+  return tracked_value(ctx, val);
+}
+
+ValuePtr ContextNewValueBigInt(ContextPtr ctx, int64_t v) {
+  LOCAL_CONTEXT(ctx);
+  m_value* val = new m_value;
+  val->id = 0;
+  val->iso = iso;
+  val->ctx = ctx;
+  val->ptr = Persistent<Value, CopyablePersistentTraits<Value>>(
+      iso, BigInt::New(iso, v));
+  return tracked_value(ctx, val);
+}
+
+ValuePtr ContextNewValueBigIntFromUnsigned(ContextPtr ctx, uint64_t v) {
+  LOCAL_CONTEXT(ctx);
+  m_value* val = new m_value;
+  val->id = 0;
+  val->iso = iso;
+  val->ctx = ctx;
+  val->ptr = Persistent<Value, CopyablePersistentTraits<Value>>(
+      iso, BigInt::NewFromUnsigned(iso, v));
+  return tracked_value(ctx, val);
+}
+
+RtnValue ContextNewValueBigIntFromWords(ContextPtr ctx,
+                                        int sign_bit,
+                                        int word_count,
+                                        const uint64_t* words) {
+  LOCAL_CONTEXT(ctx);
 
   RtnValue rtn = {};
   Local<BigInt> bigint;

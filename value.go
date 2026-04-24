@@ -54,13 +54,14 @@ func Null(iso *Isolate) *Value {
 }
 
 // NewValue will create a primitive value. Supported values types to create are:
-//   string -> V8::String
-//   int32 -> V8::Integer
-//   uint32 -> V8::Integer
-//   int64 -> V8::BigInt
-//   uint64 -> V8::BigInt
-//   bool -> V8::Boolean
-//   *big.Int -> V8::BigInt
+//
+//	string -> V8::String
+//	int32 -> V8::Integer
+//	uint32 -> V8::Integer
+//	int64 -> V8::BigInt
+//	uint64 -> V8::BigInt
+//	bool -> V8::Boolean
+//	*big.Int -> V8::BigInt
 func NewValue(iso *Isolate, val interface{}) (*Value, error) {
 	if iso == nil {
 		return nil, errors.New("v8go: failed to create new Value: Isolate cannot be <nil>")
@@ -131,6 +132,92 @@ func NewValue(iso *Isolate, val interface{}) (*Value, error) {
 
 		rtn := C.NewValueBigIntFromWords(iso.ptr, C.int(sign), C.int(count), &words[0])
 		return valueResult(nil, rtn)
+	default:
+		return nil, fmt.Errorf("v8go: unsupported value type `%T`", v)
+	}
+
+	return rtnVal, nil
+}
+
+// NewValueInContext will create a primitive value associated with a Context.
+func NewValueInContext(ctx *Context, val interface{}) (*Value, error) {
+	if ctx == nil {
+		return nil, errors.New("v8go: failed to create new Value: Context cannot be <nil>")
+	}
+
+	var rtnVal *Value
+
+	switch v := val.(type) {
+	case string:
+		cstr := C.CString(v)
+		defer C.free(unsafe.Pointer(cstr))
+		rtn := C.ContextNewValueString(ctx.ptr, cstr, C.int(len(v)))
+		return valueResult(ctx, rtn)
+	case int32:
+		rtnVal = &Value{
+			ptr: C.ContextNewValueInteger(ctx.ptr, C.int(v)),
+			ctx: ctx,
+		}
+	case uint32:
+		rtnVal = &Value{
+			ptr: C.ContextNewValueIntegerFromUnsigned(ctx.ptr, C.uint(v)),
+			ctx: ctx,
+		}
+	case int64:
+		rtnVal = &Value{
+			ptr: C.ContextNewValueBigInt(ctx.ptr, C.int64_t(v)),
+			ctx: ctx,
+		}
+	case uint64:
+		rtnVal = &Value{
+			ptr: C.ContextNewValueBigIntFromUnsigned(ctx.ptr, C.uint64_t(v)),
+			ctx: ctx,
+		}
+	case bool:
+		var b int
+		if v {
+			b = 1
+		}
+		rtnVal = &Value{
+			ptr: C.ContextNewValueBoolean(ctx.ptr, C.int(b)),
+			ctx: ctx,
+		}
+	case float64:
+		rtnVal = &Value{
+			ptr: C.ContextNewValueNumber(ctx.ptr, C.double(v)),
+			ctx: ctx,
+		}
+	case *big.Int:
+		if v.IsInt64() {
+			rtnVal = &Value{
+				ptr: C.ContextNewValueBigInt(ctx.ptr, C.int64_t(v.Int64())),
+				ctx: ctx,
+			}
+			break
+		}
+
+		if v.IsUint64() {
+			rtnVal = &Value{
+				ptr: C.ContextNewValueBigIntFromUnsigned(ctx.ptr, C.uint64_t(v.Uint64())),
+				ctx: ctx,
+			}
+			break
+		}
+
+		var sign, count int
+		if v.Sign() == -1 {
+			sign = 1
+		}
+		bits := v.Bits()
+		count = len(bits)
+
+		words := make([]C.uint64_t, count, count)
+		for idx, word := range bits {
+			words[idx] = C.uint64_t(word)
+		}
+
+		rtn := C.ContextNewValueBigIntFromWords(ctx.ptr, C.int(sign), C.int(count), &words[0])
+		return valueResult(ctx, rtn)
 	default:
 		return nil, fmt.Errorf("v8go: unsupported value type `%T`", v)
 	}
