@@ -137,7 +137,6 @@ typedef struct {
 
 extern void Init();
 extern IsolatePtr NewIsolate();
-extern IsolatePtr NewIsolateWithConstraints(size_t maximum_heap_size_in_bytes);
 extern void IsolatePerformMicrotaskCheckpoint(IsolatePtr ptr);
 extern int PumpMessageLoop(IsolatePtr ptr, int max_tasks);
 extern void IsolateDispose(IsolatePtr ptr);

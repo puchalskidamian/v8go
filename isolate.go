@@ -66,22 +66,6 @@ func NewIsolate() *Isolate {
 	return iso
 }
 
-// Creates a new V8 isolate with an explicit max heap limit.
-func NewIsolateWithConstraints(maxHeapSizeInBytes uint64) *Isolate {
-	v8once.Do(func() {
-		C.Init()
-	})
-
-	iso := &Isolate{
-		ptr: C.NewIsolateWithConstraints(C.size_t(maxHeapSizeInBytes)),
-		cbs: make(map[int]FunctionCallback),
-	}
-	iso.null = newValueNull(iso)
-	iso.undefined = newValueUndefined(iso)
-
-	return iso
-}
-
 // TerminateExecution terminates forcefully the current thread
 // of JavaScript execution in the given isolate.
 func (i *Isolate) TerminateExecution() {

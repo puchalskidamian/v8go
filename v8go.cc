@@ -164,29 +164,6 @@ IsolatePtr NewIsolate() {
   return iso;
 }
 
-IsolatePtr NewIsolateWithConstraints(size_t maximum_heap_size_in_bytes) {
-  ResourceConstraints rc;
-  rc.ConfigureDefaultsFromHeapSize(0, maximum_heap_size_in_bytes);
-
-  Isolate::CreateParams params;
-  params.constraints = rc;
-  params.array_buffer_allocator = default_allocator;
-
-  Isolate* iso = Isolate::New(params);
-  Locker locker(iso);
-  Isolate::Scope isolate_scope(iso);
-  HandleScope handle_scope(iso);
-
-  iso->SetCaptureStackTraceForUncaughtExceptions(true);
-
-  m_ctx* ctx = new m_ctx;
-  ctx->ptr.Reset(iso, Context::New(iso));
-  ctx->iso = iso;
-  iso->SetData(0, ctx);
-
-  return iso;
-}
-
 static inline m_ctx* isolateInternalContext(Isolate* iso) {
   return static_cast<m_ctx*>(iso->GetData(0));
 }
