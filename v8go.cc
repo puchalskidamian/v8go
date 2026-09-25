@@ -173,27 +173,23 @@ void IsolatePerformMicrotaskCheckpoint(IsolatePtr iso) {
   iso->PerformMicrotaskCheckpoint();
 }
 
-int PumpMessageLoop(IsolatePtr iso, int max_tasks) {
+int PumpMessageLoop(IsolatePtr iso, int limit) {
   if (iso == nullptr) {
     return 0;
   }
 
-  Locker locker(iso);
-  Isolate::Scope isolate_scope(iso);
-  HandleScope handle_scope(iso);
+  ISOLATE_SCOPE(iso)
 
-  int tasks_run = 0;
-  const int limit = max_tasks <= 0 ? 1000 : max_tasks;
-
-  while (tasks_run < limit) {
-    bool executed = platform::PumpMessageLoop(default_platform.get(), iso);
-    if (!executed) {
+  int tasks = 0;
+  while (tasks < limit) {
+    if (!platform::PumpMessageLoop(default_platform.get(), iso)) {
       break;
     }
 
-    tasks_run++;
+    tasks++;
   }
-  return tasks_run;
+
+  return tasks;
 }
 
 void IsolateDispose(IsolatePtr iso) {
@@ -1044,10 +1040,8 @@ ValuePtr ContextNewValueBigIntFromUnsigned(ContextPtr ctx, uint64_t v) {
   return tracked_value(ctx, val);
 }
 
-RtnValue ContextNewValueBigIntFromWords(ContextPtr ctx,
-                                        int sign_bit,
-                                        int word_count,
-                                        const uint64_t* words) {
+RtnValue ContextNewValueBigIntFromWords(ContextPtr ctx, int sign_bit,
+                                        int word_count, const uint64_t* words) {
   LOCAL_CONTEXT(ctx);
 
   RtnValue rtn = {};
